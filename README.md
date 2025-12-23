@@ -71,7 +71,9 @@ and they can be read or written using standard BLE tooling.
 ### Developer mode
 
 When started with:
+```bash
 python3 volcano_http.py --devmode
+```
 
 ```bash
 
@@ -85,4 +87,18 @@ Server/
 
 Shelly/
   blu-button.js       # Shelly BLU Button script (button → HTTP mapping)
+```
 
+
+## Disclaimer
+
+This project is not affiliated with, endorsed by, or supported by
+Storz & Bickel GmbH.
+
+All communication with the device uses standard, publicly accessible
+Bluetooth LE characteristics as exposed by the Volcano Hybrid.
+
+No firmware is modified and no security mechanisms are bypassed.
+
+If you are a representative of Storz & Bickel and have concerns about this project,
+please feel free to get in touch via the contact address provided.
