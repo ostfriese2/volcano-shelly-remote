@@ -2,14 +2,14 @@
 // ID(s)  BLU Button(s) und Server Adresse
 let BLUE_BUTTON_ID  = 201;  // blauer Button
 let BLACK_BUTTON_ID = 200;  // schwarzer Button reseviert für Volcano
-let SERVER_URL = 'http://172.16.0.5:8181' // Rechner mit volcano_http.py
+let SERVER_URL = 'http://192.168.178.5:8181' // Rechner mit volcano_http.py
 // Wunschtemperatur bei Triple Push
 let YOUR_SPECIAL_TEMP = '190'
-// Blauer Button optional
-let blue1 = 'http://172.16.0.52/relay/0?turn=toggle';
-let blue2 = 'http://172.16.0.138/web/powerstate?newstate=0';
+// Blauer Button optional (nicht benötigt für Volcano)
+let blue1 = '';
+let blue2 = '';
 let blue3 = '';
-let blue4 = 'http://172.16.0.108/script/1/switch_to?toggle';
+let blue4 = '';
 ////////// Ab hier Anderungen auf eigene Gefahr////////////
 
 
