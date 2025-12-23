@@ -75,12 +75,12 @@ When started with:
 python3 volcano_http.py --devmode
 ```
 
+
 ```bash
 
 
 ## Repository structure
 
-```text
 server/
   volcano_http.py     # BLE → HTTP server for the Volcano Hybrid
   volcano_icons.py    # Dynamic temperature-based notification icons
