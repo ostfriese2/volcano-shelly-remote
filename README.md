@@ -51,6 +51,29 @@ The PC shows:
 - clean, readable terminal output
 
 ---
+## Developer Notes
+
+This project intentionally contains more Bluetooth LE information than strictly required
+for the basic one-button use case.
+
+### BLE characteristics
+
+All known Bluetooth LE characteristics used by the Volcano Hybrid are defined in the code.
+These values were obtained by observing the device’s normal BLE communication.
+
+- All characteristics that are actively used are considered stable
+- Additional characteristics are included for experimentation and further development
+- Experimental or unverified characteristics are clearly marked in the code
+
+Nothing here is encrypted or bypassed — the device exposes these characteristics openly
+and they can be read or written using standard BLE tooling.
+
+### Developer mode
+
+When started with:
+
+```bash
+python3 volcano_http.py --devmode
 
 ## Repository structure
 
@@ -61,3 +84,4 @@ Server/
 
 Shelly/
   blu-button.js       # Shelly BLU Button script (button → HTTP mapping)
+
