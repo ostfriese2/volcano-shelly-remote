@@ -55,9 +55,9 @@ The PC shows:
 ## Repository structure
 
 ```text
-server/
+Server/
   volcano_http.py     # BLE → HTTP server for the Volcano Hybrid
   volcano_icons.py    # Dynamic temperature-based notification icons
 
-shelly/
+Shelly/
   blu-button.js       # Shelly BLU Button script (button → HTTP mapping)
