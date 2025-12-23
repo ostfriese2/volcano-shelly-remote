@@ -71,9 +71,10 @@ and they can be read or written using standard BLE tooling.
 ### Developer mode
 
 When started with:
+python3 volcano_http.py --devmode
 
 ```bash
-python3 volcano_http.py --devmode
+
 
 ## Repository structure
 
