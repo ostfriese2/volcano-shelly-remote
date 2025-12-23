@@ -41,6 +41,9 @@ This project focuses on:
   - If the device is off: power on and heat to last temperature
   - If ready: toggle fan (vapor on / off)
 
+- **Double press**
+  - Change temperature 160 °C to 230 °C in 10 ° steps
+
 - **Long press**
   - Power everything down
 
