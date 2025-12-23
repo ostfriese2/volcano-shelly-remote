@@ -1,22 +1,25 @@
-// IDs deiner beiden BLU Buttons
-//Bitte anpassen für Volano reicht ein Button hier BLACK_BUTTON_ID
-//Man kann auch ehrere Button verwenden, wie hier der BLUE-Button 
-//für andere Sachen, ist aber für den Volcano nicht notwendig.
-
+/////////////////////// user config ///////////////////////
+// ID(s)  BLU Button(s) und Server Adresse
 let BLUE_BUTTON_ID  = 201;  // blauer Button
-let BLACK_BUTTON_ID = 200;  // schwarzer Button
-
+let BLACK_BUTTON_ID = 200;  // schwarzer Button reseviert für Volcano
+let SERVER_URL = 'http://172.16.0.5:8181' // Rechner mit volcano_http.py
+// Wunschtemperatur bei Triple Push
+let YOUR_SPECIAL_TEMP = '190'
+// Blauer Button optional
 let blue1 = 'http://172.16.0.52/relay/0?turn=toggle';
 let blue2 = 'http://172.16.0.138/web/powerstate?newstate=0';
 let blue3 = '';
 let blue4 = 'http://172.16.0.108/script/1/switch_to?toggle';
-let black1 = 'http://172.16.0.5:8181/fan/';
-let black2 = 'http://172.16.0.5:8181/on';
-let black3 = '';
+////////// Ab hier Anderungen auf eigene Gefahr////////////
+
+
+//Reseviert für Volcano
+let black1 = SERVER_URL + '/fan/';
+let black2 = SERVER_URL + '/on';
+let black3 = SERVER_URL + '/on?temp=' + YOUR_SPECIAL_TEMP;
 let black4 = 'http://127.0.0.1/relay/0?turn=toggle';
 
 let fan = 'off';
-let temp = '190';
 
 // ------------------------------
 // Queue / Takt / Timeout (Shelly-kompatibel)
@@ -80,7 +83,7 @@ function _processOne() {
   if (job === null) return;
 
   _busy = true;
-
+  print('--> ' + job.url);
   Shelly.call("HTTP.Request", {
     method: "GET",
     url: job.url,
@@ -88,21 +91,22 @@ function _processOne() {
   }, function (res, err) {
     // konservativ: ok nur bei HTTP 2xx und err==0
     let ok = (err === 0 && res && res.code >= 200 && res.code < 300);
-
+    
     if (!ok) {
       if (job.retries < MAX_RETRIES) {
         job.retries++;
         _enqueue(job.url); // hinten wieder anstellen
       } else {
-        // optionales Logging; bei Bedarf auskommentieren
-        if (job.url.indexOf('172.16.0.5:8181') >= 0) {
+        // Bei Fail Volcano Strom geben über Shelly Plug
+        if (job.url.indexOf(SERVER_URL) >= 0) {
           getURL('http://127.0.0.1/relay/0?turn=on')
-        }
-        print("HTTP failed:", JSON.stringify({
-          url: job.url,
-          err: err,
-          code: (res ? res.code : null)
-        }));
+        } else {
+          print("HTTP failed:", JSON.stringify({
+            url: job.url,
+            err: err,
+            code: (res ? res.code : null)
+          }));
+        } 
       }
     }
 
@@ -136,6 +140,7 @@ function handleBlu(ev) {
     who = "Blauer Button";
     if (evt === "single_push") getURL(blue1);
     if (evt === "double_push") getURL(blue2);
+    if (evt === "triple_push") getURL(blue3);
     if (evt === "long_push")   getURL(blue4);
 
   } else if (id === BLACK_BUTTON_ID) {
@@ -152,17 +157,21 @@ function handleBlu(ev) {
 
     if (evt === "double_push") {
       if (!status.output) {
-        //temp = '0';
-        print(who + " hat " + evt + " gesendet");
         return;
       }
       getURL(black2);
     }
 
+    if (evt === "triple_push") {
+      if (!status.output) {
+        return;
+      }
+      getURL(black3);
+    }
+
     if (evt === "long_push") {
       if (status.output) {
         fan = 'off';
-        temp = '0';
       }
       getURL(black4);
     }
