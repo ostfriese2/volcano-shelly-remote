@@ -81,11 +81,11 @@ python3 volcano_http.py --devmode
 ## Repository structure
 
 ```text
-Server/
+server/
   volcano_http.py     # BLE → HTTP server for the Volcano Hybrid
   volcano_icons.py    # Dynamic temperature-based notification icons
 
-Shelly/
+shelly/
   blu-button.js       # Shelly BLU Button script (button → HTTP mapping)
 ```
 
