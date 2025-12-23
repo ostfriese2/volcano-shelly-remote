@@ -67,11 +67,6 @@ def log_error(msg: str, exc: Optional[BaseException] = None) -> None:
         # Logging soll nie selbst einen Crash verursachen
         pass
 
-
-# --- Boot-Wartezeit für rc.local / frühe Starts ---
-# print("[INIT] Warte 30 Sekunden (Boot-Delay)…")
-# time.sleep(30)
-
 # ==== Bekannte UUIDs ====
 SERVICE_UUID      = "10110000-5354-4f52-5a26-4249434b454c"
 CHAR_CURRENT_TEMP = "10110001-5354-4f52-5a26-4249434b454c"
