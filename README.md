@@ -1,6 +1,6 @@
 # Volcano Shelly Remote
 
-One-button control for the **Storz & Bickel Volcano Hybrid** using a physical button,
+One-button control for the **Storz & Bickel Volcano (Hybrid)** using a physical button,
 Bluetooth LE and a local HTTP server.
 
 This project turns the Volcano into a device that can be operated **blindly**,
@@ -12,8 +12,8 @@ without a phone, browser or touchscreen.
 
 This setup combines:
 
-- A **Shelly BLU Button** (mounted directly on the hose)
-- A **Shelly Plug (Gen 3)** to control power
+- A **Shelly BLU Button** (mounted directly on the hose if wanted)
+- A **Shelly Plug (Gen 2/3)** to control power
 - A **Python HTTP server** that talks to the Volcano via Bluetooth LE
 - Desktop notifications and terminal output for live feedback
 
