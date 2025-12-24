@@ -29,7 +29,7 @@ from numpy.core.defchararray import title
 # Port, auf dem der HTTP-Server lauscht und über den interne Auto-/on-Calls laufen.
 AUTO_ON_PORT = 8181
 
-# Standard-Zieltemperatur beim ersten Start, bis eine andere per HTTP gesetzt wird.
+# Standard
 TO_KILL_NOTIFICATION = 1
 LAST_MESSAGE = ''
 WATCH_RUNNING = False
@@ -45,8 +45,8 @@ from typing import Optional, Dict, List, Tuple
 # ==== Einfaches Error-Log im /tmp ====
 LOG_PATH = "/tmp/volcano_http_error.log"
 
-NOTIFY_PATH = shutil.which("notify-send")              # z.B. /usr/local/bin/notify-send (Wrapper)
-ns_real = NOTIFY_PATH + ".real"                        # -> /usr/local/bin/notify-send.real
+NOTIFY_PATH = shutil.which("notify-send")
+ns_real = NOTIFY_PATH + ".real"
 if os.path.exists(ns_real):
     NOTIFY_PATH = ns_real
 
@@ -64,7 +64,6 @@ def log_error(msg: str, exc: Optional[BaseException] = None) -> None:
             if exc is not None:
                 traceback.print_exception(type(exc), exc, exc.__traceback__, file=f)
     except Exception:
-        # Logging soll nie selbst einen Crash verursachen
         pass
 
 # ==== Bekannte UUIDs ====
@@ -713,8 +712,6 @@ async def send_notify(req, v, title: str, body: str, timeout_ms: int = 5000) -> 
                 LAST_PRINT = ''
 
             if 'Heizen' in title and LAST_PRINT:
-                #print('tile=' + title)
-                #print('LAST_PRINT=' + LAST_PRINT)
                 if ist < soll or ist == soll:
                     title =  title.replace('AUS','EIN')
                 if ist > soll:
@@ -723,19 +720,19 @@ async def send_notify(req, v, title: str, body: str, timeout_ms: int = 5000) -> 
                     print(ts() + title.replace(ball, ersatzball))
                     set_timer(1)
             new_print = title.split('Volcano: ')[1].split('Ist:')[0]
+            
             if ist==soll==0:
                 ersatzball  = '❌'
-            #print('new_print=' + new_print)
+
             if new_print not in LAST_PRINT:
                 print(ts() + title.replace(ball, ersatzball))
-            #print(req)
-            #if not 'GET /fan' in str(req):
+
             LAST_PRINT = new_print
             if 'Online AUS' in title:
                 print()
 
         if 'GET /fan/on' in str(req):
-            pass#set_timer(int(timeout_ms/1000) -1)
+            pass
         if delta < 0:
             asyncio.create_task(notify_http_event(req, v, "Heizen AUS"))
         elif delta > 0:
@@ -804,10 +801,6 @@ async def status(req):
         log_error("/status Exception", e)
         return err(str(e))
 
-################################################
-################################################
-################################################
-################################################
 async def on(req):
     global DEFAULT_TEMP
     global TEMP_AVAILABLE
@@ -818,6 +811,12 @@ async def on(req):
         temp_val = float(TEMP_AVAILABLE[TEMP_INDEX])
         if t:
             temp_val = float(t)
+            i=-1
+            for temp in TEMP_AVAILABLE:
+                i += 1
+                if int(temp) >= temp_val:
+                    TEMP_INDEX = i
+                    break
         temp_old = DEFAULT_TEMP
         await v.set_temp(temp_val)
         try:
