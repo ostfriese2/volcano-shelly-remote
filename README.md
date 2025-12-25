@@ -44,13 +44,16 @@ This project focuses on:
 - **Double press**
   - Change temperature 160 °C to 230 °C in 10 ° steps
 
+- **Tripüe press**
+  - Change temperature to your favourite temperature
+
 - **Long press**
   - Power everything down
 
 The PC shows:
 - connection status
 - temperature progress
-- readiness via desktop notifications
+- readiness all via desktop notifications
 - clean, readable terminal output
 
 ---
