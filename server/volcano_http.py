@@ -820,16 +820,16 @@ async def on(req):
         temp_old = DEFAULT_TEMP
         await v.set_temp(temp_val)
         try:
-            v.last_target_temp = str(temp_val).split('.')[0].split(',')[0]
-            DEFAULT_TEMP = v.last_target_temp
-            TEMP_INDEX += 1
-            if TEMP_INDEX == len(TEMP_AVAILABLE):
-                TEMP_INDEX = 0
+            if not t:
+                v.last_target_temp = str(temp_val).split('.')[0].split(',')[0]
+                DEFAULT_TEMP = v.last_target_temp
+                TEMP_INDEX += 1
+                if TEMP_INDEX == len(TEMP_AVAILABLE):
+                    TEMP_INDEX = 0
         except Exception:
             pass
         what = "Heizen EIN"
         if DEFAULT_TEMP < temp_old:
-
             what = "Heizen AUS"
         await notify_http_event(req, v, what)
         await v.heat_on()
