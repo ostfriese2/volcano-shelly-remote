@@ -26,7 +26,7 @@ let fan = 'off';
 // ------------------------------
 let CALL_TICK_MS   = 250;   // alle 250ms max. 1 HTTP-Request starten
 let HTTP_TIMEOUT_S = 3;     // kurzer Timeout
-let MAX_QUEUE_LEN  = 30;    // Schutz bei hektischem Drücken
+let MAX_QUEUE_LEN  = 3;    // Schutz bei hektischem Drücken
 let MAX_RETRIES    = 0;     // 0 = keine Retries (meist stabiler)
 
 let _q = [];        // Queue-Array
