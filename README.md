@@ -42,7 +42,7 @@ This project focuses on:
   - If ready: toggle fan (vapor on / off)
 
 - **Double press**
-  - Change temperature 160 °C to 230 °C in 10 ° steps
+  - Change temperature 150 °C to 230 °C in 10 ° steps
 
 - **Tripüe press**
   - Change temperature to your favourite temperature
