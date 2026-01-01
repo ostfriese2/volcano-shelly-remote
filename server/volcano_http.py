@@ -7,6 +7,13 @@ StayConnected + /discover + --verbose + --devmode (Dev-Tools & Notify-Sniffer)
 Kompatibel mit bleak 1.1.x (Linux)
 """
 
+# === Konfigurierbare Parameter (manuell anpassbar) ===
+# Port, auf dem der HTTP-Server lauscht.
+AUTO_ON_PORT   = 8181
+TEMP_AVAILABLE = ['150','160','170','180','190','200','210','220','230']
+FAV_TEMP       = '190'
+# ===         Konfigurierbare Parameter ENDE        ===
+
 import threading
 import requests
 import asyncio
@@ -17,38 +24,24 @@ import json
 import os
 import subprocess
 import shutil
-from pathlib import Path
 from aiohttp import web
 from bleak import BleakClient, BleakScanner
 from bleak.backends.device import BLEDevice
 from datetime import datetime
-
-from numpy.core.defchararray import title
-
-# === Konfigurierbare Parameter (manuell anpassbar) ===
-# Port, auf dem der HTTP-Server lauscht und über den interne Auto-/on-Calls laufen.
-AUTO_ON_PORT = 8181
-
-# Standard
-TO_KILL_NOTIFICATION = 1
-LAST_MESSAGE = ''
-WATCH_RUNNING = False
-TEMP_AVAILABLE = ['160','170','180','190','200','210','220','230']
-TEMP_INDEX = 0
-DEFAULT_TEMP = TEMP_AVAILABLE[TEMP_INDEX]
-FAN_STATE = 'Pumpen AUS'
-TIMER_SET = False
-
 from bleak.backends.scanner import AdvertisementData
 from typing import Optional, Dict, List, Tuple
 
 # ==== Einfaches Error-Log im /tmp ====
 LOG_PATH = "/tmp/volcano_http_error.log"
 
+# Globale Parameter.
 NOTIFY_PATH = shutil.which("notify-send")
-ns_real = NOTIFY_PATH + ".real"
-if os.path.exists(ns_real):
-    NOTIFY_PATH = ns_real
+TO_KILL_NOTIFICATION = 1
+WATCH_RUNNING = False
+TEMP_INDEX = 0
+DEFAULT_TEMP = FAV_TEMP
+FAN_STATE = 'Pumpen AUS'
+
 
 def log_error(msg: str, exc: Optional[BaseException] = None) -> None:
     """
@@ -64,6 +57,7 @@ def log_error(msg: str, exc: Optional[BaseException] = None) -> None:
             if exc is not None:
                 traceback.print_exception(type(exc), exc, exc.__traceback__, file=f)
     except Exception:
+        # Logging soll nie selbst einen Crash verursachen
         pass
 
 # ==== Bekannte UUIDs ====
@@ -91,13 +85,11 @@ SETTINGS_CANDIDATES = [
 def _u16le_to_c(v: bytes) -> Optional[float]:
     return int.from_bytes(v[:2], "little") / 10.0 if len(v) >= 2 else None
 
-
 def _hex(b: bytes, maxlen: int = 64) -> str:
     if b is None:
         return "None"
     h = b.hex()
     return h if len(h) <= maxlen else (h[:maxlen] + "…")
-
 
 def _looks_like_volcano(name: Optional[str], uuids: Optional[List[str]]) -> bool:
     n = (name or "").lower()
@@ -108,7 +100,6 @@ def _looks_like_volcano(name: Optional[str], uuids: Optional[List[str]]) -> bool
             return True
     return False
 
-
 # ==== BLE-Kern ====
 class VolcanoBLE:
     def __init__(
@@ -116,7 +107,7 @@ class VolcanoBLE:
         mac: Optional[str],
         scan_seconds: int = 6,
         keepalive: bool = True,
-        keepalive_interval: int = 5,
+        keepalive_interval: int = 60,
         preconnect: bool = True,
         devmode: bool = False,
     ):
@@ -187,10 +178,11 @@ class VolcanoBLE:
                 ist = str(int(data['current']))
                 TEMP_INDEX = TEMP_AVAILABLE.index(soll) if soll in TEMP_AVAILABLE else 0
                 DEFAULT_TEMP = TEMP_AVAILABLE[TEMP_INDEX]
-                print(ts() + 'BLE    : ' + 'verbunden                            ✅\n')
+                print(ts() + 'BLE    : ' + 'verbunden  '
+                                         + '                          ✅\n')
                 aw = requests.get(url + 'on?temp=' + str(int(data['target'])),timeout=20)
                 data = aw.json()
-                if(data['ok'] and data['action'] == 'on'):
+                if(data['ok'] and 'EIN' in data['action']):
                         ok = True
                 else:
                     time.sleep(1)
@@ -309,7 +301,6 @@ class VolcanoBLE:
         self._last_addr = addr
 
         #Auto-Start über internen HTTP-Call (nutzt die zuletzt gesetzte Zieltemperatur)
-        ################################################################################################
         # Watch (auto-heat) nach (Re)Connect starten
         global WATCH_RUNNING
         if not WATCH_RUNNING:
@@ -532,7 +523,7 @@ async def monitor_connection(v: "VolcanoBLE", interval: int = 10):
     while True:
         connected = bool(v.client and getattr(v.client, "is_connected", False))
         if connected and not old:
-            await send_notify(None, v, 'Volcano: Online EIN', 'online')
+            pass #oder await send_notify(None, v, 'Volcano: Online EIN', 'online')
         if connected:
             old = True
         if not connected:
@@ -547,6 +538,8 @@ async def monitor_connection(v: "VolcanoBLE", interval: int = 10):
             await asyncio.sleep(interval)
         await asyncio.sleep(interval)
 
+
+# noinspection PyTypeChecker
 def value_to_rgb(v: float, vmin=0, vmax=230):
     v = max(vmin, min(vmax, v))
     t = (v - vmin) / (vmax - vmin)
@@ -573,7 +566,7 @@ def make_ball_icon(value: float, size: int = 88) -> str:
     pad = 1
     d.ellipse((pad, pad, size - pad, size - pad), fill=(r, g, b, 255))
     d.ellipse((pad, pad, size - pad, size - pad), outline=(0, 0, 0, 80), width=1)
-    d.ellipse((pad+8, pad+8, size//2, size//2), fill=(255, 255, 255, 60))
+    d.ellipse((pad+8, pad+8, size//8, size//8), fill=(255, 255, 255, 60))
 
     fd, path = tempfile.mkstemp(prefix="volcano_ball_", suffix=".png")
     os.close(fd)
@@ -600,54 +593,42 @@ async def _set_timer_for(seconds: float):
 def set_timer(seconds: float):
     asyncio.create_task(_set_timer_for(seconds))
 
-def vaporizer_text(temp_c: int, icon=False) -> str:
-    if 160 <= temp_c <= 175:
-        if icon:
-            return '😋'
-        return "Wirkung: Geschmack & Klarheit"
+def vaporizer_text(temp_c: int, icon: bool = False) -> str:
+    if temp_c < 160:
+        return '🫥' if icon else "Wirkung: Geschmack    THC: ---    CBN: ---"
 
-    elif 175 < temp_c <= 190:
-        if icon:
-            return '😶‍🌫️'
-        return "Wirkung: Ausgeglichenes High"
+    elif 160 <= temp_c <= 169:
+        return '😋' if icon else "Wirkung: Klar         THC: +--    CBN: ---"
 
-    elif 190 <= temp_c <=210:
-        if icon:
-            return '😴'
-        return "Wirkung: Entspannung & Schlaf"
+    elif 170 <= temp_c <= 189:
+        return '🌿' if icon else "Wirkung: Moderat      THC: ++-    CBN: ---"
 
-    elif 210 <= temp_c < 221:
-        if icon:
-            return '⚕️'
-        return "Wirkung: Medizinische Nutzung"
+    elif 190 <= temp_c <= 199:
+        return '🧞' if icon else "Wirkung: Stark        THC: +++    CBN: +--"
 
-    elif temp_c > 221:
-        if icon:
-            return '🚫'
-        return "Wirkung: !!!!! UNGESUNDES RISIKO !!!!!"
+    elif 200 <= temp_c <= 209:
+        return '🌛' if icon else "Wirkung: Schwer       THC: ++-    CBN: ++-"
+
+    elif 210 <= temp_c <= 220:
+        return '😴' if icon else "Wirkung: Müde         THC: +--    CBN: +++"
+
     else:
-        return ""
+        return '🚫' if icon else "Wirkung: Risiko       THC: ---    CBN: ++-"
+
+
 
 def ts() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S ")
 
-async def send_notify(req, v, title: str, body: str, timeout_ms: int = 5000) -> None:
+async def send_notify(req, v, title: str, body: str, timeout_ms: int = 10000) -> None:
     """Zentraler Helper für Desktop-Notifications via notify-send."""
     from volcano_icons import get_cached_icon
     global TO_KILL_NOTIFICATION
-    global LAST_MESSAGE
     global LAST_PRINT
     global FAN_STATE
-    global TIMER_SET
     ist = 0
     soll = 0
     level = 'normal'
-    if not req and body == LAST_MESSAGE:
-        return
-    old_message = LAST_MESSAGE
-    if not TIMER_SET:
-        pass
-        #LAST_MESSAGE = body
     if req:
         level = 'normal'
         resp = await status(req)
@@ -659,26 +640,26 @@ async def send_notify(req, v, title: str, body: str, timeout_ms: int = 5000) -> 
     if 'GET /fan/off' in str(req):
         TIMER_SET = False
     try:
-        ball = '🟢'
-        ersatzball = '🟢'
+        ball = '❌'
+        ersatzball = ball
         if not req:
             ball  = '❌'
             if body == 'online':
                 ball = '✅'
         if ist < soll:
             ball = '🔵'
-            ersatzball = '🔵'
+            ersatzball = ball
         elif ist == soll and ist != 0 and soll != 0:
             ball = vaporizer_text(ist,True)
             ersatzball = '🟢'
         elif ist > soll:
             ball = "🔴"
-            ersatzball = "🔴"
+            ersatzball = ball
 
         soll_str = str(int(soll))
         while len(soll_str) < 3:
             soll_str = ' ' + soll_str
-        title += ' Soll: ' + soll_str + ' °C'
+        title += '    Soll: ' + soll_str + ' °C'
         ist_str = str(int(ist))
         if ist_str == '  0':
            ist_str = '---'
@@ -686,6 +667,7 @@ async def send_notify(req, v, title: str, body: str, timeout_ms: int = 5000) -> 
             ist_str = ' ' + ist_str
         title += (' Ist: ' + ist_str + ' °C  ')
         title += ball
+        title = title.replace('  ', ' ')
         val = ist
         if val > 220:
             val = 230
@@ -703,36 +685,37 @@ async def send_notify(req, v, title: str, body: str, timeout_ms: int = 5000) -> 
         title,
         body
         ]
-        if not TIMER_SET:
-            res = subprocess.run(cmd, capture_output=True,  text=True)
-            TO_KILL_NOTIFICATION = res.stdout.strip().split("\n")[0].strip()
-            try:
-                LAST_PRINT = LAST_PRINT
-            except:
-                LAST_PRINT = ''
+        res = subprocess.run(cmd, capture_output=True,  text=True)
+        TO_KILL_NOTIFICATION = res.stdout.strip().split("\n")[0].strip()
+        try:
+            LAST_PRINT = LAST_PRINT
+        except:
+            LAST_PRINT = ''
 
-            if 'Heizen' in title and LAST_PRINT:
-                if ist < soll or ist == soll:
-                    title =  title.replace('AUS','EIN')
-                if ist > soll:
-                    title =  title.replace('EIN','AUS')
-                if title.count(str(int(soll))) == 2:
-                    print(ts() + title.replace(ball, ersatzball))
-                    set_timer(1)
-            new_print = title.split('Volcano: ')[1].split('Ist:')[0]
-            
-            if ist==soll==0:
-                ersatzball  = '❌'
-
-            if new_print not in LAST_PRINT:
+        if 'Heizen' in title:
+            #print('tile=' + title)
+            #print('LAST_PRINT=' + LAST_PRINT)
+            if ist < soll or ist == soll:
+                title =  title.replace('AUS','EIN')
+            if ist > soll:
+                title =  title.replace('EIN','AUS')
+            if title.count(str(int(soll))) == 2:
                 print(ts() + title.replace(ball, ersatzball))
-
-            LAST_PRINT = new_print
-            if 'Online AUS' in title:
-                print()
+                set_timer(1)
+        new_print = title.split('Volcano: ')[1].split('Ist:')[0]
+        if ist==soll==0:
+            ersatzball  = '❌'
+        #print('new_print=' + new_print)
+        if new_print not in LAST_PRINT:
+            print(ts() + title.replace(ball, ersatzball))
+        #print(req)
+        #if not 'GET /fan' in str(req):
+        LAST_PRINT = new_print
+        if 'Online AUS' in title:
+            print()
 
         if 'GET /fan/on' in str(req):
-            pass
+            pass#set_timer(int(timeout_ms/1000) -1)
         if delta < 0:
             asyncio.create_task(notify_http_event(req, v, "Heizen AUS"))
         elif delta > 0:
@@ -810,11 +793,13 @@ async def on(req):
         t = req.query.get("temp")
         temp_val = float(TEMP_AVAILABLE[TEMP_INDEX])
         if t:
+            if t == 'FAV':
+                t = FAV_TEMP
             temp_val = float(t)
-            i=-1
+            i = - 1
             for temp in TEMP_AVAILABLE:
                 i += 1
-                if int(temp) >= temp_val:
+                if int(temp) > temp_val:
                     TEMP_INDEX = i
                     break
         temp_old = DEFAULT_TEMP
@@ -833,7 +818,8 @@ async def on(req):
             what = "Heizen AUS"
         await notify_http_event(req, v, what)
         await v.heat_on()
-        return ok({"action": "on", "target": (float(t) if t else None)})
+        ret_t = (float(t) if t else DEFAULT_TEMP)
+        return ok({"action": what + ' ' + str(ret_t) + ' °C', "target": ret_t})
     except Exception as e:
         if req.app["devmode"]:
             print("[DEV] /on Exception:")
@@ -847,7 +833,7 @@ async def off(req):
     try:
         await v.heat_off()
         await notify_http_event(req, v, "Heizen AUS")
-        return ok({"action": "off"})
+        return ok({"action": "Heizen AUS"})
     except Exception as e:
         if req.app["devmode"]:
             print("[DEV] /off Exception:")
@@ -863,7 +849,7 @@ async def fan_on(req):
         await v.fan_on()
         await notify_http_event(req, v, "Pumpen EIN")
         FAN_STATE = 'Pumpen EIN'
-        return ok({"action": "fan_on"})
+        return ok({"action": "Pumpen EIN"})
     except Exception as e:
         if req.app["devmode"]:
             print("[DEV] /fan/on Exception:")
@@ -879,7 +865,7 @@ async def fan_off(req):
         await v.fan_off()
         await notify_http_event(req, v, "Pumpen AUS")
         FAN_STATE = 'Pumpen AUS'
-        return ok({"action": "fan_off"})
+        return ok({"action": "Pumpen AUS"})
     except Exception as e:
         if req.app["devmode"]:
             print("[DEV] /fan/off Exception:")
@@ -1031,26 +1017,20 @@ async def discover_handler(req):
         return err(str(e))
 
 
-def make_app(v: VolcanoBLE, devmode: bool) -> web.Application:
+def make_app(v: VolcanoBLE, devmode: bool, help_text: str) -> web.Application:
     a = web.Application()
     a["v"] = v
     a["devmode"] = devmode
+
+    async def index(_):
+        return web.Response(
+            text=help_text,
+            content_type="text/plain",
+        )
+
     a.add_routes(
         [
-            web.get(
-                "/",
-                lambda r: web.Response(
-                    text=(
-                        "Volcano HTTP\n\n"
-                        "GET /status\nGET /on?temp=190\nGET /off\n"
-                        "GET /fan/on /fan/off\nGET /pump/on /pump/off\n"
-                        "GET /discover\n"
-                        "DEV: /settings/snapshot, /dev/read?uuid=..., "
-                        "/dev/write/bool|u8|u16le|hex\n"
-                    ),
-                    content_type="text/plain",
-                ),
-            ),
+            web.get("/", index),
             web.get("/status", status),
             web.get("/on", on),
             web.get("/off", off),
@@ -1086,26 +1066,33 @@ async def main_async(args):
     runner: Optional[web.AppRunner] = None
 
     try:
-
         # HTTP-Server aufsetzen
-        app = make_app(v, devmode=args.devmode)
+        os.system("clear")
+
+        endpoints = ['on','on?temp=180  (Bsp.)','off','pump/on','pump/off','discover']
+
+        help = ""
+        help += f"{ts()}Server gestartet  http://{args.host}:{args.port}\n\n\n"
+
+        p = "Mögliche URL               : "
+        for each in endpoints:
+            help += f"{p}http://{args.host}:{args.port}/{each}\n"
+
+        help += "\n"
+        print(help)
+
+        app = make_app(v, devmode=args.devmode, help_text=help)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(
-            runner, host=args.host, port=args.port
+            runner, host=args.host, port=args.port, reuse_address=True,
         )
-        os.system("clear")
-        endpoints = ['on','on?temp=180  (Bsp.)','off','pump/on','pump/off','discover']
-        print(f"{ts()}Server : http://{args.host}:{args.port}\n")
-        p = "Mögliche URL               : "
-        for each in endpoints:
-            print(f"{p}http://{args.host}:{args.port}/{each}")
-        print()
         await site.start()
+
         # BLE initialisieren (mit robustem Preconnect)
         await v.startup()
 
-        #Verbindungs-Monitor
+        # Verbindungs-Monitor
         asyncio.create_task(
             monitor_connection(v, interval=args.verbose_interval)
         )
@@ -1131,25 +1118,20 @@ async def main_async(args):
             print(f"[MAIN] Fehler bei v.shutdown(): {e}")
             log_error("Fehler bei v.shutdown()", e)
 
-def kill_others():
-    run = True
-    while run:
-        run = False
-        for process in subprocess.run(["ps", "aux"], capture_output=True,text=True).stdout.split('\n'):
-            if 'python3 ' in process \
-                    and str(Path(__file__).resolve()).split('/')[-1] in process \
-                    and not str(os.getpid()) in process:
-                run = True
-                for each in process.split(' '):
-                    if each.isnumeric():
-                        print('Beende laufende Server Instanz pid ' + str(each))
-                        os.system('kill -2 ' + str(each))
-                        time.sleep(1)
-                        break
+
+def highlander(sig=2, wait=10.0):
+    import os, time
+    me=os.getpid(); cmd=open("/proc/self/cmdline","rb").read()
+    pids=[int(p) for p in os.listdir("/proc") if p.isdigit() and int(p)!=me and open(f"/proc/{p}/cmdline","rb").read()==cmd]
+    [os.kill(p, sig) for p in pids]; t=time.time()
+    while pids and time.time()-t < wait: pids=[p for p in pids if os.path.exists(f"/proc/{p}")]; time.sleep(0.05)
+    os.system('kill -9 $(lsof -ti :' + str(AUTO_ON_PORT) + ')')
+
 
 
 if __name__ == "__main__":
-    kill_others()
+    # Es kann nur einen geben
+    highlander()
     p = argparse.ArgumentParser()
     p.add_argument(
         "--mac",
