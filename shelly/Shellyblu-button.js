@@ -1,22 +1,21 @@
 /////////////////////// user config ///////////////////////
 // ID(s)  BLU Button(s) und Server Adresse
-let BLUE_BUTTON_ID  = 201;  // blauer Button
+let BLUE_BUTTON_ID  = 201;  // blauer Button optional
 let BLACK_BUTTON_ID = 200;  // schwarzer Button reseviert für Volcano
-let SERVER_URL = 'http://192.168.178.5:8181' // Rechner mit volcano_http.py
-// Wunschtemperatur bei Triple Push
-let YOUR_SPECIAL_TEMP = '190'
-// Blauer Button optional (nicht benötigt für Volcano)
-let blue1 = '';
-let blue2 = '';
+let SERVER_URL = 'http://172.16.0.5:8181' // Rechner mit volcano_http.py
+
+// Blauer Button optional
+let blue1 = 'http://172.16.0.52/relay/0?turn=toggle';
+let blue2 = 'http://172.16.0.138/web/powerstate?newstate=0';
 let blue3 = '';
-let blue4 = '';
+let blue4 = 'http://172.16.0.108/script/1/switch_to?toggle';
 ////////// Ab hier Anderungen auf eigene Gefahr////////////
 
 
 //Reseviert für Volcano
 let black1 = SERVER_URL + '/fan/';
 let black2 = SERVER_URL + '/on';
-let black3 = SERVER_URL + '/on?temp=' + YOUR_SPECIAL_TEMP;
+let black3 = SERVER_URL + '/on?temp=FAV';
 let black4 = 'http://127.0.0.1/relay/0?turn=toggle';
 
 let fan = 'off';
@@ -91,7 +90,17 @@ function _processOne() {
   }, function (res, err) {
     // konservativ: ok nur bei HTTP 2xx und err==0
     let ok = (err === 0 && res && res.code >= 200 && res.code < 300);
-    
+    if(ok) {
+      if(JSON.parse(res.body).action != undefined) {
+        print('<-- ' + JSON.parse(res.body).action);
+      } else {
+        if(JSON.parse(res.body).ison) {
+          print('<-- Plug EIN');
+        } else {
+          print('<-- Plug AUS');
+        }
+      }
+    }
     if (!ok) {
       if (job.retries < MAX_RETRIES) {
         job.retries++;
@@ -180,7 +189,7 @@ function handleBlu(ev) {
     who = "Unbekannter Button";
   }
 
-  print(who + " hat " + evt + " gesendet");
+  print('BLE ' + who + " " + evt);
 }
 
 Shelly.addEventHandler(handleBlu);
