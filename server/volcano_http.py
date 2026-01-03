@@ -5,7 +5,7 @@
 volcano_http.py – Mini-HTTP-Server für S&B Volcano Hybrid (BLE → HTTP)
 StayConnected + /discover + --verbose + --devmode (Dev-Tools & Notify-Sniffer)
 Kompatibel mit bleak 1.1.x (Linux)
-See LICENCE.txt
+See LICENSE.txt
 """
 
 
