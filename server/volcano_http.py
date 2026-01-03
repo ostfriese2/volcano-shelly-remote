@@ -5,14 +5,19 @@
 volcano_http.py – Mini-HTTP-Server für S&B Volcano Hybrid (BLE → HTTP)
 StayConnected + /discover + --verbose + --devmode (Dev-Tools & Notify-Sniffer)
 Kompatibel mit bleak 1.1.x (Linux)
+See LICENCE.txt
 """
 
-# === Konfigurierbare Parameter (manuell anpassbar) ===
+
+# =========== Konfigurierbare Parameter (manuell anpassbar) ============
+
 # Port, auf dem der HTTP-Server lauscht.
 AUTO_ON_PORT   = 8181
 TEMP_AVAILABLE = ['150','160','170','180','190','200','210','220','230']
 FAV_TEMP       = '190'
-# ===         Konfigurierbare Parameter ENDE        ===
+
+# ===========         Konfigurierbare Parameter ENDE        ============
+
 
 import threading
 import requests
@@ -40,7 +45,7 @@ TO_KILL_NOTIFICATION = 1
 WATCH_RUNNING = False
 TEMP_INDEX = 0
 DEFAULT_TEMP = FAV_TEMP
-FAN_STATE = 'Pumpen AUS'
+FAN_STATE = 'Pumpen              : AUS'
 
 
 def log_error(msg: str, exc: Optional[BaseException] = None) -> None:
@@ -136,7 +141,7 @@ class VolcanoBLE:
         Wichtig: Callback ist sync -> hier nur Status zurücksetzen, kein await.
         """
         global WATCH_RUNNING
-        print('\n' + ts() + 'BLE    : ' + 'getrennt                             ❌\n')
+        print('\n' + ts() + 'BLE          : ' + 'getrennt                      ❌\n')
         try:
             if self.devmode:
                 print("[DEV] Disconnected-Callback: Verbindung verloren, markiere Client als None.")
@@ -178,8 +183,8 @@ class VolcanoBLE:
                 ist = str(int(data['current']))
                 TEMP_INDEX = TEMP_AVAILABLE.index(soll) if soll in TEMP_AVAILABLE else 0
                 DEFAULT_TEMP = TEMP_AVAILABLE[TEMP_INDEX]
-                print(ts() + 'BLE    : ' + 'verbunden  '
-                                         + '                          ✅\n')
+                print(ts() + 'BLE          : ' + 'verbunden  '
+                                         + '                   ✅\n')
                 aw = requests.get(url + 'on?temp=' + str(int(data['target'])),timeout=20)
                 data = aw.json()
                 if(data['ok'] and 'EIN' in data['action']):
@@ -188,7 +193,7 @@ class VolcanoBLE:
                     time.sleep(1)
             except:
                 time.sleep(5)
-        FAN_STATE = 'Pumpen AUS'
+        FAN_STATE = 'Pumpen              : AUS'
         WATCH_RUNNING = False
 
     async def _scan_pick_best(self, seconds: Optional[int] = None) -> Optional[str]:
@@ -221,8 +226,8 @@ class VolcanoBLE:
             return None
         volcanoes.sort(key=lambda kv: kv[1][1], reverse=True)
         best_addr = volcanoes[0][0]
-        print(ts() + 'BLE    : Auto-Scan')
-        print(ts() + 'BLE    : Gefunden ' + best_addr)
+        print(ts() + 'BLE          : Auto-Scan')
+        print(ts() + 'BLE          : Gefunden ' + best_addr)
         return best_addr
 
     async def _dump_services(self, c: BleakClient):
@@ -472,7 +477,7 @@ class VolcanoBLE:
         # BLE-Verbindung sauber trennen
         if self.client and getattr(self.client, "is_connected", False):
             try:
-                print(ts() + "BLE    :  Trenne Verbindung zum Gerät (Shutdown)…")
+                print(ts() + "BLE          :  Trenne Verbindung zum Gerät (Shutdown)…")
                 await self.client.disconnect()
             except Exception as e:
                 log_error("Fehler beim BLE-Disconnect im Shutdown", e)
@@ -523,7 +528,7 @@ async def monitor_connection(v: "VolcanoBLE", interval: int = 10):
     while True:
         connected = bool(v.client and getattr(v.client, "is_connected", False))
         if connected and not old:
-            pass #oder await send_notify(None, v, 'Volcano: Online EIN', 'online')
+            pass #oder await send_notify(None, v, 'Online             : EIN', 'online')
         if connected:
             old = True
         if not connected:
@@ -531,7 +536,7 @@ async def monitor_connection(v: "VolcanoBLE", interval: int = 10):
             t.start()
             if old:
                 try:
-                    await send_notify(None, v, 'Volcano: Online AUS', 'offline')
+                    await send_notify(None, v, 'Online             : AUS', 'offline')
                     old = False
                 except Exception as e:
                     pass
@@ -593,28 +598,104 @@ async def _set_timer_for(seconds: float):
 def set_timer(seconds: float):
     asyncio.create_task(_set_timer_for(seconds))
 
-def vaporizer_text(temp_c: int, icon: bool = False) -> str:
+def vaporizer_text(temp_c: int, icon: bool = False, terpene: bool = False) -> str:
+    # Wenn terpene aktiviert ist, geben wir reinen Text zurück (du formatierst später selbst)
+    if terpene:
+        if temp_c < 150:
+            return ""
+
+        elif temp_c < 160:
+            terp  = "Cannabinoide : THC ---  CBD ---  CBN ---\n"
+            terp += "Terpene      : Sehr flüchtig Aroma-Start\n"
+            terp += "Bisabolol    : Sanft, beruhigend, floral\n"
+            terp += "Pinene          :  Hier eher Anbahnungs-Aroma\n"
+            terp += "Wirkung      : Geschmack\n"
+            return terp
+
+        elif 160 <= temp_c <= 169:
+            terp  = "Cannabinoide : THC +--  CBD ---  CBN ---\n"
+            terp += "Terpene      : Klar, frisch Kiefer, Kräuter\n"
+            terp += "α-Pinene     : Klarer Kopf, fokussiert\n"
+            terp += "Camphene     : Kühl-krautig, leicht scharf\n"
+            terp += "Wirkung      : Klarheit\n"
+            return terp
+
+        elif 170 <= temp_c <= 179:
+            terp  = "Cannabinoide : THC ++-  CBD +--  CBN ---\n"
+            terp += "Terpene      : Zitrus, frisch, klar\n"
+            terp += "d-Limonene   : Hell, zitrisch, oft Mood-Boost\n"
+            terp += "Eucalyptol   : Mentholig, freiere Atmung\n"
+            terp += "Ocimene      : Süß-kraeutrig, oft uplift\n"
+            terp += "Wirkung      : Moderat\n"
+            return terp
+
+        elif 180 <= temp_c <= 189:
+            terp  = "Cannabinoide : THC ++-  CBD +--  CBN ---\n"
+            terp += "Terpene      : Zitrus + komplexer, dichter\n"
+            terp += "d-Limonene   : Zitrisch, hell (nimmt langsam ab)\n"
+            terp += "Terpinolene  : Kraeutrig-suess, ausgleichend\n"
+            terp += "Eucalyptol   : Frisch, mentholig (noch)\n"
+            terp += "Wirkung      : Stark\n"
+            return terp
+
+        elif 190 <= temp_c <= 199:
+            terp  = "Cannabinoide : THC +++  CBD ++-  CBN +--\n"
+            terp += "Terpene      : Komplexer, schwerer\n"
+            terp += "Terpinolene  : Krautig, zitrisch, süß, sedierend\n"
+            terp += "Wirkung      : Schwer\n"
+            return terp
+
+        elif 200 <= temp_c <= 209:
+            terp  = "Cannabinoide : THC ++-  CBD ++-  CBN ++-\n"
+            terp += "Terpene      : Floral, Abend-Richtung\n"
+            terp += "Linalool     : Lavendel, beruhigend\n"
+            terp += "Humulene     : Hopfig, körperlich erdend\n"
+            terp += "Fenchol      : Schwerer, harzig, ölig\n"
+            terp += "Wirkung      : Müdigkeit\n"
+            return terp
+
+        elif 210 <= temp_c <= 219:
+            terp  = "Cannabinoide : THC +--  CBD +++  CBN +++\n"
+            terp += "Terpene      : Medizinisch, couchiger\n"
+            terp += "Borneol      : Kampferig, oft sedierend\n"
+            terp += "Menthol      : Stark kühlend, schwer\n"
+            terp += "Wirkung      : Müde\n"
+            return terp
+
+        elif 220 <= temp_c <= 221:
+            terp  = "Cannabinoide : THC ---  CBD -++  CBN -++\n"
+            terp += "Terpene      : Letzte Reste\n"
+            terp += "Terpineol    : Blumig, weich, entspannend\n"
+            terp += "Wirkung      : Schläfrigkeit\n"
+            return terp
+
+        else:
+            terp  = "Cannabinoide : THC ---  CBD --+  CBN --+\n"
+            terp += "Terpene      : Nicht nützlich\n"
+            terp += "Verbrennung  : Schadstoffe\n"
+            terp += "Wirkung      : Ungesund\n"
+            return terp
+
     if temp_c < 160:
-        return '🫥' if icon else "Wirkung: Geschmack    THC: ---    CBN: ---"
+        return '🫥' if icon else "Wirkung: Geschmack    THC: ---    CBD: ---    CBN: ---"
 
     elif 160 <= temp_c <= 169:
-        return '😋' if icon else "Wirkung: Klar         THC: +--    CBN: ---"
+        return '😋' if icon else "Wirkung: Klar         THC: +--    CBD: ---    CBN: ---"
 
     elif 170 <= temp_c <= 189:
-        return '🌿' if icon else "Wirkung: Moderat      THC: ++-    CBN: ---"
+        return '🌿' if icon else "Wirkung: Moderat      THC: ++-    CBD: +--    CBN: ---"
 
     elif 190 <= temp_c <= 199:
-        return '🧞' if icon else "Wirkung: Stark        THC: +++    CBN: +--"
+        return '🧞' if icon else "Wirkung: Stark        THC: +++    CBD: ++-    CBN: +--"
 
     elif 200 <= temp_c <= 209:
-        return '🌛' if icon else "Wirkung: Schwer       THC: ++-    CBN: ++-"
+        return '🌛' if icon else "Wirkung: Schwer       THC: ++-    CBD: ++-    CBN: ++-"
 
     elif 210 <= temp_c <= 220:
-        return '😴' if icon else "Wirkung: Müde         THC: +--    CBN: +++"
+        return '😴' if icon else "Wirkung: Müde         THC: +--    CBD: +++    CBN: +++"
 
     else:
-        return '🚫' if icon else "Wirkung: Risiko       THC: ---    CBN: ++-"
-
+        return '🚫' if icon else "Wirkung: Risiko       THC: ---    CBD: ++-    CBN: ++-"
 
 
 def ts() -> str:
@@ -650,7 +731,7 @@ async def send_notify(req, v, title: str, body: str, timeout_ms: int = 10000) ->
             ball = '🔵'
             ersatzball = ball
         elif ist == soll and ist != 0 and soll != 0:
-            ball = vaporizer_text(ist,True)
+            ball = vaporizer_text(temp_c=ist, icon=True)
             ersatzball = '🟢'
         elif ist > soll:
             ball = "🔴"
@@ -672,7 +753,9 @@ async def send_notify(req, v, title: str, body: str, timeout_ms: int = 10000) ->
         if val > 220:
             val = 230
         icon_path = get_cached_icon(int(ist - map_value(val)))
-        body = vaporizer_text(soll)
+        body = "\n"
+        #body += vaporizer_text(temp_c=soll) + '\n\n'
+        body += vaporizer_text(temp_c=soll, terpene=True)
         cmd: list[str] = [
         NOTIFY_PATH,
         "--expire-time", str(timeout_ms),
@@ -693,8 +776,6 @@ async def send_notify(req, v, title: str, body: str, timeout_ms: int = 10000) ->
             LAST_PRINT = ''
 
         if 'Heizen' in title:
-            #print('tile=' + title)
-            #print('LAST_PRINT=' + LAST_PRINT)
             if ist < soll or ist == soll:
                 title =  title.replace('AUS','EIN')
             if ist > soll:
@@ -702,24 +783,25 @@ async def send_notify(req, v, title: str, body: str, timeout_ms: int = 10000) ->
             if title.count(str(int(soll))) == 2:
                 print(ts() + title.replace(ball, ersatzball))
                 set_timer(1)
-        new_print = title.split('Volcano: ')[1].split('Ist:')[0]
+        new_print = title.replace(ball,'').split('Ist')[0].strip()
         if ist==soll==0:
             ersatzball  = '❌'
-        #print('new_print=' + new_print)
+        if 'Soll:  0' in title:
+            title = title.replace('Soll:  ','Soll:   ')
+        if 'Ist:  0' in title:
+            title = title.replace('Ist:  ','Ist:   ')
         if new_print not in LAST_PRINT:
             print(ts() + title.replace(ball, ersatzball))
-        #print(req)
-        #if not 'GET /fan' in str(req):
         LAST_PRINT = new_print
-        if 'Online AUS' in title:
+        if 'Online             : AUS' in title:
             print()
 
         if 'GET /fan/on' in str(req):
             pass#set_timer(int(timeout_ms/1000) -1)
         if delta < 0:
-            asyncio.create_task(notify_http_event(req, v, "Heizen AUS"))
+            asyncio.create_task(notify_http_event(req, v, "Heizen             : AUS"))
         elif delta > 0:
-            asyncio.create_task(notify_http_event(req, v, "Heizen EIN"))
+            asyncio.create_task(notify_http_event(req, v, "Heizen             : EIN"))
 
     except Exception as e:
         print(str(e))
@@ -745,7 +827,7 @@ async def notify_http_event(req, v: "VolcanoBLE", action: str,
         cur_txt = str(current)
         tgt_txt = str(target)
 
-    title = f"Volcano: {action}"
+    title = f"{action}"
     body = f"Soll: {tgt_txt}, Ist: {cur_txt}"
 
     try:
@@ -813,9 +895,9 @@ async def on(req):
                     TEMP_INDEX = 0
         except Exception:
             pass
-        what = "Heizen EIN"
+        what = "Heizen             : EIN"
         if DEFAULT_TEMP < temp_old:
-            what = "Heizen AUS"
+            what = "Heizen             : AUS"
         await notify_http_event(req, v, what)
         await v.heat_on()
         ret_t = (float(t) if t else DEFAULT_TEMP)
@@ -832,8 +914,8 @@ async def off(req):
     v: VolcanoBLE = req.app["v"]
     try:
         await v.heat_off()
-        await notify_http_event(req, v, "Heizen AUS")
-        return ok({"action": "Heizen AUS"})
+        await notify_http_event(req, v, "Pumpen              : AUS")
+        return ok({"action": "Pumpen              : AUS"})
     except Exception as e:
         if req.app["devmode"]:
             print("[DEV] /off Exception:")
@@ -847,9 +929,9 @@ async def fan_on(req):
     v: VolcanoBLE = req.app["v"]
     try:
         await v.fan_on()
-        await notify_http_event(req, v, "Pumpen EIN")
-        FAN_STATE = 'Pumpen EIN'
-        return ok({"action": "Pumpen EIN"})
+        await notify_http_event(req, v, "Pumpen              : EIN")
+        FAN_STATE = 'Pumpen              : EIN'
+        return ok({"action": "Pumpen              : EIN"})
     except Exception as e:
         if req.app["devmode"]:
             print("[DEV] /fan/on Exception:")
@@ -863,9 +945,9 @@ async def fan_off(req):
     v: VolcanoBLE = req.app["v"]
     try:
         await v.fan_off()
-        await notify_http_event(req, v, "Pumpen AUS")
-        FAN_STATE = 'Pumpen AUS'
-        return ok({"action": "Pumpen AUS"})
+        await notify_http_event(req, v, "Pumpen              : AUS")
+        FAN_STATE = 'Pumpen              : AUS'
+        return ok({"action": "Pumpen              : AUS"})
     except Exception as e:
         if req.app["devmode"]:
             print("[DEV] /fan/off Exception:")
@@ -1074,7 +1156,7 @@ async def main_async(args):
         help = ""
         help += f"{ts()}Server gestartet  http://{args.host}:{args.port}\n\n\n"
 
-        p = "Mögliche URL               : "
+        p = "Mögliche URL                     :  "
         for each in endpoints:
             help += f"{p}http://{args.host}:{args.port}/{each}\n"
 
