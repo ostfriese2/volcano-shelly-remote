@@ -599,10 +599,9 @@ def set_timer(seconds: float):
     asyncio.create_task(_set_timer_for(seconds))
 
 def vaporizer_text(temp_c: int, icon: bool = False, terpene: bool = False) -> str:
-    # Wenn terpene aktiviert ist, geben wir reinen Text zurück (du formatierst später selbst)
     if terpene:
         if temp_c < 150:
-            return ""
+            return "Alle Angaben ohne Gewähr. Es handelt sich um\n               PROSA"
 
         elif temp_c < 160:
             terp  = "Cannabinoide : THC ---  CBD ---  CBN ---\n"
@@ -754,7 +753,6 @@ async def send_notify(req, v, title: str, body: str, timeout_ms: int = 10000) ->
             val = 230
         icon_path = get_cached_icon(int(ist - map_value(val)))
         body = "\n"
-        #body += vaporizer_text(temp_c=soll) + '\n\n'
         body += vaporizer_text(temp_c=soll, terpene=True)
         cmd: list[str] = [
         NOTIFY_PATH,
