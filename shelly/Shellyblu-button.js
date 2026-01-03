@@ -1,3 +1,4 @@
+// See LICENCE.txt
 /////////////////////// user config ///////////////////////
 // ID(s)  BLU Button(s) und Server Adresse
 let BLUE_BUTTON_ID  = 201;  // blauer Button optional
