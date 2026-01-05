@@ -9,14 +9,15 @@ See LICENSE.txt
 """
 
 
-# =========== Konfigurierbare Parameter (manuell anpassbar) ============
+# ===============  Konfigurierbare Parameter (manuell anpassbar)   ===============
 
 # Port, auf dem der HTTP-Server lauscht.
 AUTO_ON_PORT   = 8181
-TEMP_AVAILABLE = ['150','160','170','180','190','200','210','220','230']
+#TEMP_AVAILABLE = ['170','190','220'] <-- Bsp.
+TEMP_AVAILABLE = ['150','160','170','180','190','200','210','220','230'] 
 FAV_TEMP       = '190'
 
-# ===========         Konfigurierbare Parameter ENDE        ============
+# ===============          Konfigurierbare Parameter ENDE          ===============
 
 
 import threading
@@ -362,7 +363,7 @@ class VolcanoBLE:
                         print(f"[DEV] WRITE {uuid} ✓ (response=False)")
                     return
             except Exception as e:
-                # Wenn das Gerät zwischendurch aus war, hilft oft nur: Client verwerfen, neu verbinden, nochmal schreiben.
+                # Wenn das Gerät zwischendurch aus war, hilft oft nur: Client verwerfen, neu verbinden, neu schreiben.
                 log_error(f"WRITE {uuid} endgültig fehlgeschlagen – Reconnect & Retry", e)
                 if self.devmode:
                     print(f"[DEV] WRITE {uuid} endgültig fehlgeschlagen: {e} (Reconnect & Retry)")
@@ -601,14 +602,14 @@ def set_timer(seconds: float):
 def vaporizer_text(temp_c: int, icon: bool = False, terpene: bool = False) -> str:
     if terpene:
         if temp_c < 150:
-            return "Alle Angaben ohne Gewähr. Es handelt sich um\n               PROSA"
+            return "Alle Angaben ohne Gewähr. Es handelt sich um\n                  PROSA"
 
         elif temp_c < 160:
             terp  = "Cannabinoide : THC ---  CBD ---  CBN ---\n"
             terp += "Terpene      : Sehr flüchtig Aroma-Start\n"
             terp += "Bisabolol    : Sanft, beruhigend, floral\n"
-            terp += "Pinene          :  Hier eher Anbahnungs-Aroma\n"
-            terp += "Wirkung      : Geschmack\n"
+            terp += "Pinene       : Hier eher Anbahnungs-Aroma\n"
+            terp += "Wirkung      : Geschmack"
             return terp
 
         elif 160 <= temp_c <= 169:
@@ -616,7 +617,7 @@ def vaporizer_text(temp_c: int, icon: bool = False, terpene: bool = False) -> st
             terp += "Terpene      : Klar, frisch Kiefer, Kräuter\n"
             terp += "α-Pinene     : Klarer Kopf, fokussiert\n"
             terp += "Camphene     : Kühl-krautig, leicht scharf\n"
-            terp += "Wirkung      : Klarheit\n"
+            terp += "Wirkung      : Klarheit"
             return terp
 
         elif 170 <= temp_c <= 179:
@@ -625,23 +626,23 @@ def vaporizer_text(temp_c: int, icon: bool = False, terpene: bool = False) -> st
             terp += "d-Limonene   : Hell, zitrisch, oft Mood-Boost\n"
             terp += "Eucalyptol   : Mentholig, freiere Atmung\n"
             terp += "Ocimene      : Süß-kraeutrig, oft uplift\n"
-            terp += "Wirkung      : Moderat\n"
+            terp += "Wirkung      : Moderat"
             return terp
 
         elif 180 <= temp_c <= 189:
             terp  = "Cannabinoide : THC ++-  CBD +--  CBN ---\n"
             terp += "Terpene      : Zitrus + komplexer, dichter\n"
-            terp += "d-Limonene   : Zitrisch, hell (nimmt langsam ab)\n"
-            terp += "Terpinolene  : Kraeutrig-suess, ausgleichend\n"
+            terp += "d-Limonene   : Zitrisch, hell, weniger\n"
+            terp += "Terpinolene  : Kräutrig-süß, ausgleichend\n"
             terp += "Eucalyptol   : Frisch, mentholig (noch)\n"
-            terp += "Wirkung      : Stark\n"
+            terp += "Wirkung      : Stark"
             return terp
 
         elif 190 <= temp_c <= 199:
             terp  = "Cannabinoide : THC +++  CBD ++-  CBN +--\n"
             terp += "Terpene      : Komplexer, schwerer\n"
-            terp += "Terpinolene  : Krautig, zitrisch, süß, sedierend\n"
-            terp += "Wirkung      : Schwer\n"
+            terp += "Terpinolene  : Zitrisch, süß, sedierend\n"
+            terp += "Wirkung      : Schwer"
             return terp
 
         elif 200 <= temp_c <= 209:
@@ -650,7 +651,7 @@ def vaporizer_text(temp_c: int, icon: bool = False, terpene: bool = False) -> st
             terp += "Linalool     : Lavendel, beruhigend\n"
             terp += "Humulene     : Hopfig, körperlich erdend\n"
             terp += "Fenchol      : Schwerer, harzig, ölig\n"
-            terp += "Wirkung      : Müdigkeit\n"
+            terp += "Wirkung      : Müdigkeit"
             return terp
 
         elif 210 <= temp_c <= 219:
@@ -658,21 +659,21 @@ def vaporizer_text(temp_c: int, icon: bool = False, terpene: bool = False) -> st
             terp += "Terpene      : Medizinisch, couchiger\n"
             terp += "Borneol      : Kampferig, oft sedierend\n"
             terp += "Menthol      : Stark kühlend, schwer\n"
-            terp += "Wirkung      : Müde\n"
+            terp += "Wirkung      : Müde"
             return terp
 
         elif 220 <= temp_c <= 221:
             terp  = "Cannabinoide : THC ---  CBD -++  CBN -++\n"
             terp += "Terpene      : Letzte Reste\n"
             terp += "Terpineol    : Blumig, weich, entspannend\n"
-            terp += "Wirkung      : Schläfrigkeit\n"
+            terp += "Wirkung      : Schläfrigkeit"
             return terp
 
         else:
             terp  = "Cannabinoide : THC ---  CBD --+  CBN --+\n"
             terp += "Terpene      : Nicht nützlich\n"
             terp += "Verbrennung  : Schadstoffe\n"
-            terp += "Wirkung      : Ungesund\n"
+            terp += "Wirkung      : Ungesund"
             return terp
 
     if temp_c < 160:
@@ -752,7 +753,7 @@ async def send_notify(req, v, title: str, body: str, timeout_ms: int = 10000) ->
         if val > 220:
             val = 230
         icon_path = get_cached_icon(int(ist - map_value(val)))
-        body = "\n"
+        body = ""
         body += vaporizer_text(temp_c=soll, terpene=True)
         cmd: list[str] = [
         NOTIFY_PATH,
@@ -760,7 +761,7 @@ async def send_notify(req, v, title: str, body: str, timeout_ms: int = 10000) ->
         "--icon", icon_path,
         "--urgency", level,
         "--replace-id", str(TO_KILL_NOTIFICATION),
-        "--app-name", "Volcano",
+        "--app-name", "Volcano http",
         "-h", "boolean:transient:true",
         "-p",
         title,
