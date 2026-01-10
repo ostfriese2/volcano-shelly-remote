@@ -1,7 +1,7 @@
 // See LICENSE.txt
 /////////////////////// user config ///////////////////////
 // ID(s)  BLU Button(s) und Server Adresse
-let BLUE_BUTTON_ID  = 201;  // blauer Button optional
+let BLUE_BUTTON_ID  = 201;  // blauer Button
 let BLACK_BUTTON_ID = 200;  // schwarzer Button reseviert für Volcano
 let SERVER_URL = 'http://172.16.0.5:8181' // Rechner mit volcano_http.py
 
@@ -24,9 +24,9 @@ let fan = 'off';
 // ------------------------------
 // Queue / Takt / Timeout (Shelly-kompatibel)
 // ------------------------------
-let CALL_TICK_MS   = 250;   // alle 250ms max. 1 HTTP-Request starten
-let HTTP_TIMEOUT_S = 3;     // kurzer Timeout
-let MAX_QUEUE_LEN  = 3;    // Schutz bei hektischem Drücken
+let CALL_TICK_MS   = 500;   // alle 250ms max. 1 HTTP-Request starten
+let HTTP_TIMEOUT_S = 2;     // kurzer Timeout
+let MAX_QUEUE_LEN  = 1;    // Schutz bei hektischem Drücken
 let MAX_RETRIES    = 0;     // 0 = keine Retries (meist stabiler)
 
 let _q = [];        // Queue-Array
