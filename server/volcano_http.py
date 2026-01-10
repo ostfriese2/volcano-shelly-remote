@@ -14,7 +14,7 @@ See LICENSE.txt
 # Port, auf dem der HTTP-Server lauscht.
 AUTO_ON_PORT   = 8181
 #TEMP_AVAILABLE = ['170','190','220'] <-- Bsp.
-TEMP_AVAILABLE = ['150','160','170','180','190','200','210','220','230'] 
+TEMP_AVAILABLE = ['150','160','170','180','190','200','210','220','230']
 FAV_TEMP       = '190'
 
 # ===============          Konfigurierbare Parameter ENDE          ===============
@@ -533,7 +533,7 @@ async def monitor_connection(v: "VolcanoBLE", interval: int = 10):
         if connected:
             old = True
         if not connected:
-            t = threading.Thread(target=v.watch)
+            t = threading.Thread(target=v.watch, daemon=True)
             t.start()
             if old:
                 try:
@@ -748,7 +748,7 @@ async def send_notify(req, v, title: str, body: str, timeout_ms: int = 10000) ->
             ist_str = ' ' + ist_str
         title += (' Ist: ' + ist_str + ' °C  ')
         title += ball
-        title = title.replace('  ', ' ')
+        title = title.replace('  ', ' ').strip()
         val = ist
         if val > 220:
             val = 230
@@ -1277,12 +1277,22 @@ if __name__ == "__main__":
         help="Entwicklermodus: Dev-Endpoints & Notify-Sniffer",
     )
     args = p.parse_args()
-    try:
-        asyncio.run(main_async(args))
-    except KeyboardInterrupt:
-        # Normaler manueller Abbruch – Shutdown läuft vorher im finally.
-        pass
-    except Exception as e:
-        # FATAL: Alles andere loggen wir in /tmp
-        log_error("FATAL: Unbehandelte Exception in main", e)
-        raise
+
+    # Supervisor: Bluetooth-/DBus-Aussetzer sollen NICHT das Programm beenden.
+    # Stattdessen: loggen, kurz warten, neu starten.
+    backoff_s = 2.0
+    max_backoff_s = 60.0
+
+    while True:
+        try:
+            asyncio.run(main_async(args))
+            # Wenn main_async "normal" zurückkommt (sollte nicht passieren), ebenfalls neu starten.
+            log_error("MAIN: main_async() beendet (unerwartet) – starte neu.")
+        except KeyboardInterrupt:
+            # Normaler manueller Abbruch – raus.
+            break
+        except Exception as e:
+            log_error("FATAL: Unbehandelte Exception in main_async – starte neu", e)
+            time.sleep(backoff_s)
+            backoff_s = min(max_backoff_s, backoff_s * 1.5)
+            continue
